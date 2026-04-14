@@ -1,0 +1,12 @@
+Flask
+Flask-MySQLdb
+opencv-python
+mediapipe
+numpy
+pandas
+scikit-learn
+matplotlib
+joblib
+requests
+tensorflow
+shap
