@@ -1,0 +1,57 @@
+🔴 Exhausted
+
+≥ 3 high/critical hours
+
+OR critical fatigue at end of shift
+
+🟡 Fatigued
+
+1–2 high fatigue hours
+
+No recovery
+
+🟢 Normal
+
+Mostly Low / Medium
+
+Stable EAR
+
+🔵 Fresh
+
+EAR improves over time
+
+Blink rate decreases
+
+
+
+
+
+
+
+
+Logic
+🟢 Fresh
+
+Mostly Low fatigue
+
+EAR improves during shift
+
+🟡 Normal
+
+Some Medium fatigue
+
+No sustained High fatigue
+
+🟠 Fatigued
+
+≥ 1 High fatigue hour
+
+No recovery later
+
+🔴 Exhausted
+
+≥ 2 High fatigue hours
+
+OR ≥ 1 Critical fatigue hour
+
+OR fatigue at end of shift

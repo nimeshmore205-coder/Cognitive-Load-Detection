@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>MindGuard AI – Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        rel="stylesheet" />
+    <script>
+        // ── Apply saved theme immediately to avoid flash ──
+        (function () {
+            const t = localStorage.getItem('mg-theme') || 'dark';
+            document.documentElement.classList.toggle('dark', t !== 'light');
+        })();
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ecda",
+                        "background-dark": "#0d1f1e",
+                        "card-dark": "#102220",
+                        "border-dark": "#1e3432",
+                    },
+                    fontFamily: { display: ["Inter", "sans-serif"] },
+                },
+            },
+        };
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Light mode overrides */
+        html:not(.dark) body {
+            background: #f0fffe;
+            color: #0d2b29;
+        }
+
+        html:not(.dark) header {
+            background: rgba(240, 255, 254, 0.95) !important;
+            border-color: #c2e8e5;
+        }
+
+        html:not(.dark) .bg-card-dark {
+            background: #ffffff !important;
+            border-color: #c8e8e5 !important;
+        }
+
+        html:not(.dark) .bg-background-dark {
+            background: #f0fffe !important;
+        }
+
+        html:not(.dark) .text-slate-400 {
+            color: #4a7a76 !important;
+        }
+
+        html:not(.dark) .text-slate-100 {
+            color: #0d2b29 !important;
+        }
+
+        html:not(.dark) .text-slate-300 {
+            color: #1a4a46 !important;
+        }
+
+        html:not(.dark) .border-border-dark {
+            border-color: #c8e8e5 !important;
+        }
+
+        html:not(.dark) .bg-slate-800\/30 {
+            background: rgba(200, 232, 229, 0.3) !important;
+        }
+    </style>
+</head>
+
+<body class="bg-background-dark text-slate-100 min-h-screen">
+
+    <!-- NAVBAR -->
+    <header class="sticky top-0 z-50 bg-card-dark/90 backdrop-blur-md border-b border-border-dark px-6 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-primary p-2 rounded-lg">
+                    <span class="material-symbols-outlined text-background-dark leading-none"
+                        style="font-size:1.25rem;">psychology</span>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight">MindGuard AI</h1>
+                    <p class="text-xs text-slate-400 font-medium">Cognitive Load &amp; Stress Detection</p>
+                </div>
+            </div>
+            <nav class="hidden md:flex items-center gap-8">
+                <a class="text-sm font-semibold text-primary border-b-2 border-primary pb-1"
+                    href="/user/dashboard">Dashboard</a>
+                <a class="text-sm font-medium text-slate-400 hover:text-primary transition-colors"
+                    href="/live/monitor">Live Monitor</a>
+                <a class="text-sm font-medium text-slate-400 hover:text-primary transition-colors"
+                    href="/user/history">Session History</a>
+                <a class="text-sm font-medium text-slate-400 hover:text-primary transition-colors"
+                    href="/user/stress_relief">Stress Relief</a>
+            </nav>
+            <div class="flex items-center gap-3">
+                <!-- Theme Toggle -->
+                <button onclick="toggleTheme()" id="themeBtn"
+                    class="p-2 rounded-lg border border-border-dark text-slate-400 hover:text-primary hover:border-primary/40 transition-colors"
+                    title="Toggle light/dark mode">
+                    <span id="themeIcon" class="material-symbols-outlined" style="font-size:1.1rem;">light_mode</span>
+                </button>
+                <!-- Logout Button -->
+                <a href="/auth/logout"
+                    class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-800/60 text-red-400 hover:bg-red-900/20 transition-colors text-sm font-semibold">
+                    <span class="material-symbols-outlined" style="font-size:1rem;">logout</span>
+                    Logout
+                </a>
+                <div class="flex items-center gap-3 border-l border-border-dark pl-4">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-bold">{{ user_name }}</p>
+                        <p class="text-xs text-slate-400">Active Member</p>
+                    </div>
+                    <div
+                        class="w-10 h-10 rounded-full bg-primary/20 border-2 border-primary/40 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-primary" style="font-size:1.25rem;">person</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+
+        <!-- Welcome Banner -->
+        <div
+            class="bg-gradient-to-r from-primary/10 to-transparent border border-primary/20 rounded-2xl p-6 mb-8 flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-black">Welcome back, <span class="text-primary">{{ user_name }}</span> 👋</h2>
+                <p class="text-slate-400 mt-1 text-sm">Your cognitive health dashboard is ready. Start a session to
+                    begin monitoring.</p>
+            </div>
+            <a href="/live/monitor"
+                class="hidden md:flex items-center gap-2 bg-primary text-background-dark font-bold px-6 py-3 rounded-xl shadow-lg hover:opacity-90 transition active:scale-95">
+                <span class="material-symbols-outlined">play_arrow</span>
+                Start Session
+            </a>
+        </div>
+
+        <!-- Stats + Wellness Row -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <!-- Total Sessions -->
+            <div class="bg-card-dark border border-border-dark rounded-2xl p-5">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Total Sessions</p>
+                <p class="text-3xl font-black text-primary">{{ total_sessions or 0 }}</p>
+                <p class="text-xs text-slate-500 mt-1">Lifetime</p>
+            </div>
+            <!-- This Week -->
+            <div class="bg-card-dark border border-border-dark rounded-2xl p-5">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">This Week</p>
+                <p class="text-3xl font-black text-blue-400">{{ recent_shifts | length }}</p>
+                <p class="text-xs text-slate-500 mt-1">Sessions (last 7)</p>
+            </div>
+            <!-- Wellness Score -->
+            <div class="col-span-2 bg-card-dark border border-border-dark rounded-2xl p-5 relative overflow-hidden">
+                <div class="absolute inset-0 opacity-5"
+                    style="background: radial-gradient(circle at 80% 50%, {{ wellness_color }}, transparent 70%);">
+                </div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Weekly Wellness Score</p>
+                <div class="flex items-end gap-3">
+                    {% if wellness_score is not none %}
+                    <span class="text-4xl font-black" style="color: {{ wellness_color }};">{{ wellness_score }}</span>
+                    <span class="text-slate-500 text-sm mb-1">/ 100</span>
+                    {% else %}
+                    <span class="text-2xl font-black text-slate-500">—</span>
+                    {% endif %}
+                    <span class="ml-auto px-3 py-1 rounded-full text-xs font-bold"
+                        style="background: {{ wellness_color }}20; color: {{ wellness_color }}; border: 1px solid {{ wellness_color }}40;">
+                        {{ wellness_label }}
+                    </span>
+                </div>
+                {% if wellness_score is not none %}
+                <div class="mt-3 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-1000"
+                        style="width: {{ wellness_score }}%; background: {{ wellness_color }};"></div>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Based on last {{ recent_shifts | length }} session{{ 's' if
+                    recent_shifts | length != 1 }}</p>
+                {% else %}
+                <p class="text-xs text-slate-500 mt-2">Complete a session to get your wellness score</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Action Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+
+            <!-- Live Monitoring -->
+            <a href="/live/monitor"
+                class="group bg-card-dark border border-border-dark rounded-2xl p-6 shadow-sm hover:border-primary/50 hover:shadow-primary/10 hover:shadow-lg transition-all">
+                <div
+                    class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center mb-4 group-hover:bg-primary/30 transition-colors">
+                    <span class="material-symbols-outlined text-primary" style="font-size:1.5rem;">videocam</span>
+                </div>
+                <h3 class="font-bold text-slate-100 mb-1">Live Monitoring</h3>
+                <p class="text-sm text-slate-400">Start real-time cognitive load monitoring using your webcam.</p>
+                <div class="mt-4 flex items-center gap-1 text-primary text-sm font-semibold">
+                    Start now <span
+                        class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </div>
+            </a>
+
+            <!-- Session History -->
+            <a href="/user/history"
+                class="group bg-card-dark border border-border-dark rounded-2xl p-6 shadow-sm hover:border-blue-500/40 hover:shadow-blue-500/10 hover:shadow-lg transition-all">
+                <div
+                    class="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition-colors">
+                    <span class="material-symbols-outlined text-blue-400" style="font-size:1.5rem;">history</span>
+                </div>
+                <h3 class="font-bold text-slate-100 mb-1">Session History</h3>
+                <p class="text-sm text-slate-400">View past sessions, fatigue trends, and detailed EAR reports.</p>
+                <div class="mt-4 flex items-center gap-1 text-blue-400 text-sm font-semibold">
+                    View history <span
+                        class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </div>
+            </a>
+
+            <!-- Stress Relief -->
+            <a href="/user/stress_relief"
+                class="group bg-card-dark border border-border-dark rounded-2xl p-6 shadow-sm hover:border-emerald-500/40 hover:shadow-emerald-500/10 hover:shadow-lg transition-all">
+                <div
+                    class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:bg-emerald-500/20 transition-colors">
+                    <span class="material-symbols-outlined text-emerald-400"
+                        style="font-size:1.5rem;">self_improvement</span>
+                </div>
+                <h3 class="font-bold text-slate-100 mb-1">Stress Relief</h3>
+                <p class="text-sm text-slate-400">Guided breathing exercises and relaxation techniques.</p>
+                <div class="mt-4 flex items-center gap-1 text-emerald-400 text-sm font-semibold">
+                    Relax now <span
+                        class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </div>
+            </a>
+
+            <!-- Profile -->
+            <a href="/user/profile"
+                class="group bg-card-dark border border-border-dark rounded-2xl p-6 shadow-sm hover:border-purple-500/40 hover:shadow-purple-500/10 hover:shadow-lg transition-all">
+                <div
+                    class="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4 group-hover:bg-purple-500/20 transition-colors">
+                    <span class="material-symbols-outlined text-purple-400"
+                        style="font-size:1.5rem;">manage_accounts</span>
+                </div>
+                <h3 class="font-bold text-slate-100 mb-1">My Profile</h3>
+                <p class="text-sm text-slate-400">Manage your account details and preferences.</p>
+                <div class="mt-4 flex items-center gap-1 text-purple-400 text-sm font-semibold">
+                    Edit profile <span
+                        class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </div>
+            </a>
+
+        </div>
+
+        <!-- Info Strip -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div class="bg-card-dark border border-border-dark rounded-2xl p-5 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-primary">visibility</span>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 uppercase font-bold tracking-wider">EAR Tracking</p>
+                    <p class="text-sm text-slate-300 mt-0.5">Real-time eye aspect ratio detection</p>
+                </div>
+            </div>
+            <div class="bg-card-dark border border-border-dark rounded-2xl p-5 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-amber-400/10 flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-amber-400">bedtime</span>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Fatigue Detection</p>
+                    <p class="text-sm text-slate-300 mt-0.5">ML-powered drowsiness classification</p>
+                </div>
+            </div>
+            <div class="bg-card-dark border border-border-dark rounded-2xl p-5 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-emerald-400/10 flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-emerald-400">spa</span>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Stress Relief</p>
+                    <p class="text-sm text-slate-300 mt-0.5">Guided breathing &amp; relaxation exercises</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Start Button -->
+        <div class="md:hidden mt-6">
+            <a href="/live/monitor"
+                class="w-full bg-primary text-background-dark font-black py-4 rounded-2xl shadow-xl flex items-center justify-center gap-3 active:scale-[0.98] transition-transform">
+                <span class="material-symbols-outlined">play_arrow</span>
+                START NEW SESSION
+            </a>
+        </div>
+
+    </main>
+
+    <!-- Admin-trigger polling -->
+    <script>
+        setInterval(async () => {
+            try {
+                const res = await fetch("/user/check_trigger");
+                const data = await res.json();
+                if (data.command === "START_MONITORING") window.location.href = "/live/monitor";
+            } catch (e) { }
+        }, 2000);
+
+        // ── Theme Toggle ──
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('mg-theme', isDark ? 'dark' : 'light');
+            document.getElementById('themeIcon').innerText = isDark ? 'light_mode' : 'dark_mode';
+        }
+        // Set correct icon on load
+        document.getElementById('themeIcon').innerText =
+            document.documentElement.classList.contains('dark') ? 'light_mode' : 'dark_mode';
+    </script>
+
+</body>
+
+</html>

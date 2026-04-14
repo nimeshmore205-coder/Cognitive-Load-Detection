@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>{{ user_name }} – Shift History | MindSense Admin</title>
+  <script>
+    (function () {
+      const t = localStorage.getItem('mg-admin-theme') || 'dark';
+      document.documentElement.classList.toggle('dark', t !== 'light');
+    })();
+  </script>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#13ecda",
+            "background-light": "#f6f8f8",
+            "background-dark": "#102220",
+          },
+          fontFamily: { "display": ["Inter", "sans-serif"] },
+          borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+        },
+      },
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex">
+
+  <!-- Sidebar Navigation -->
+  <aside
+    class="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed h-full z-50">
+    <div class="p-6 flex items-center gap-3">
+      <div class="size-10 bg-primary rounded-lg flex items-center justify-center text-slate-900">
+        <span class="material-symbols-outlined text-2xl font-bold">neurology</span>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold leading-tight">MindSense</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400">Admin Control</p>
+      </div>
+    </div>
+    <nav class="flex-1 px-4 space-y-2 mt-4">
+      <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+        href="/admin/dashboard">
+        <span class="material-symbols-outlined">dashboard</span>
+        Dashboard
+      </a>
+      <a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/20 text-slate-900 dark:text-primary font-medium border-l-4 border-primary"
+        href="/admin/users">
+        <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">group</span>
+        User Management
+      </a>
+      <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+        href="/admin/live_dashboard">
+        <span class="material-symbols-outlined">analytics</span>
+        Live Monitor
+      </a>
+      <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+        href="/auth/logout">
+        <span class="material-symbols-outlined">logout</span>
+        Logout
+      </a>
+    </nav>
+    <div class="p-4 border-t border-slate-200 dark:border-slate-800">
+      <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl flex items-center gap-3">
+        <div class="bg-primary/30 p-2 rounded-lg">
+          <span class="material-symbols-outlined text-primary">support_agent</span>
+        </div>
+        <div>
+          <p class="text-xs font-semibold">System Support</p>
+          <p class="text-[10px] text-slate-500">24/7 Monitoring</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 ml-64 flex flex-col min-h-screen">
+
+    <!-- Top Header Bar -->
+    <header
+      class="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-8 flex items-center justify-between sticky top-0 z-40">
+      <div class="flex items-center gap-2 text-sm text-slate-500">
+        <a href="/admin/dashboard" class="hover:text-primary transition-colors">Admin</a>
+        <span class="material-symbols-outlined text-xs">chevron_right</span>
+        <a href="/admin/users" class="hover:text-primary transition-colors">Users</a>
+        <span class="material-symbols-outlined text-xs">chevron_right</span>
+        <span class="text-slate-900 dark:text-slate-100 font-semibold">{{ user_name }}</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <!-- Theme Toggle -->
+        <button onclick="toggleTheme()" id="themeBtn"
+          class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-primary hover:border-primary/40 transition-colors"
+          title="Toggle light/dark mode">
+          <span id="themeIcon" class="material-symbols-outlined" style="font-size:1.1rem;">light_mode</span>
+        </button>
+        <div class="h-10 w-[1px] bg-slate-200 dark:bg-slate-800"></div>
+        <div class="flex items-center gap-3">
+          <div class="text-right">
+            <p class="text-sm font-bold leading-none">Admin User</p>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400">Chief Officer</p>
+          </div>
+          <div class="size-10 rounded-full bg-primary/30 flex items-center justify-center ring-2 ring-primary/20">
+            <span class="material-symbols-outlined text-slate-900 dark:text-primary">person</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <div class="p-8 space-y-8 max-w-7xl mx-auto w-full">
+
+      <!-- Breadcrumbs & Title -->
+      <div class="mb-2">
+        <nav class="flex items-center gap-2 text-slate-500 text-sm mb-2">
+          <a class="hover:text-primary transition-colors" href="/admin/dashboard">Home</a>
+          <span class="material-symbols-outlined text-xs">chevron_right</span>
+          <a class="hover:text-primary transition-colors" href="/admin/users">Users</a>
+          <span class="material-symbols-outlined text-xs">chevron_right</span>
+          <span class="text-slate-900 dark:text-slate-100 font-medium">Shift History</span>
+        </nav>
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white">{{ user_name }}</h2>
+            <p class="text-slate-500 dark:text-slate-400 mt-1">Full shift history and fatigue trend analysis.</p>
+          </div>
+          <a href="/admin/users"
+            class="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:border-primary/40 hover:text-primary transition-colors">
+            <span class="material-symbols-outlined text-sm">arrow_back</span>
+            Back to Users
+          </a>
+        </div>
+      </div>
+
+      <!-- Shifts Table -->
+      <div
+        class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <h3 class="font-bold text-slate-900 dark:text-white">Shift Records</h3>
+          <span class="text-xs text-slate-500">{{ shifts | length }} total session{{ 's' if shifts | length != 1
+            }}</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Date
+                </th>
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Avg
+                  EAR</th>
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Blink Rate</th>
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">High
+                  Fatigue</th>
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Critical Fatigue</th>
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Final State</th>
+                <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">😴
+                  Yawns</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              {% for s in shifts %}
+              <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                <td class="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{{ s.shift_date }}</td>
+                <td class="px-6 py-4">
+                  <span class="text-sm font-mono text-primary">{{ s.avg_ear }}</span>
+                </td>
+                <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                  {{ s.avg_blink_rate }} <span class="text-xs text-slate-400">/min</span>
+                </td>
+                <td class="px-6 py-4">
+                  {% if s.high_fatigue_hours and s.high_fatigue_hours > 0 %}
+                  <span
+                    class="px-2.5 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 text-xs font-bold rounded-full">
+                    ⚠️ {{ s.high_fatigue_hours }}
+                  </span>
+                  {% else %}
+                  <span class="text-slate-400 text-sm">—</span>
+                  {% endif %}
+                </td>
+                <td class="px-6 py-4">
+                  {% if s.critical_fatigue_hours and s.critical_fatigue_hours > 0 %}
+                  <span class="px-2.5 py-1 bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-bold rounded-full">
+                    🚨 {{ s.critical_fatigue_hours }}
+                  </span>
+                  {% else %}
+                  <span class="text-slate-400 text-sm">—</span>
+                  {% endif %}
+                </td>
+                <td class="px-6 py-4">
+                  {% if 'critical' in (s.final_state|lower) %}
+                  <span
+                    class="px-3 py-1 bg-red-50 dark:bg-red-900/20 text-red-500 text-[11px] font-bold rounded-full border border-red-100 dark:border-red-900/30 uppercase">{{
+                    s.final_state }}</span>
+                  {% elif 'high' in (s.final_state|lower) or 'fatigue' in (s.final_state|lower) %}
+                  <span
+                    class="px-3 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-500 text-[11px] font-bold rounded-full border border-amber-100 dark:border-amber-900/30 uppercase">{{
+                    s.final_state }}</span>
+                  {% else %}
+                  <span
+                    class="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 text-[11px] font-bold rounded-full border border-emerald-100 dark:border-emerald-900/30 uppercase">{{
+                    s.final_state }}</span>
+                  {% endif %}
+                </td>
+                <td class="px-6 py-4">
+                  {% set yc = s.yawn_count if s.yawn_count else 0 %}
+                  {% if yc > 0 %}
+                  <span
+                    class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-full">
+                    😴 {{ yc }}
+                  </span>
+                  {% else %}
+                  <span class="text-slate-400 text-sm">0</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="7" class="px-6 py-16 text-center">
+                  <div class="flex flex-col items-center gap-3 text-slate-400">
+                    <span class="material-symbols-outlined text-4xl">history_toggle_off</span>
+                    <p class="text-sm font-medium">No shift records found for this user.</p>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Fatigue Trend Chart -->
+      <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+          <h3 class="font-bold text-slate-900 dark:text-white">Fatigue Trend</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Avg Blink Rate & EAR over recorded sessions</p>
+        </div>
+        <div class="p-6">
+          <canvas id="trendChart" data-dates='{{ shifts | map(attribute="shift_date") | list | tojson }}'
+            data-blinks='{{ shifts | map(attribute="avg_blink_rate") | list | tojson }}'
+            data-ears='{{ shifts | map(attribute="avg_ear") | list | tojson }}'></canvas>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    /* ===== Theme Toggle ===== */
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('mg-admin-theme', isDark ? 'dark' : 'light');
+      document.getElementById('themeIcon').innerText = isDark ? 'light_mode' : 'dark_mode';
+      updateChartTheme(isDark);
+    }
+    document.getElementById('themeIcon').innerText =
+      document.documentElement.classList.contains('dark') ? 'light_mode' : 'dark_mode';
+
+    /* ===== Chart ===== */
+    const canvas = document.getElementById("trendChart");
+    const datesData = JSON.parse(canvas.dataset.dates);
+    const blinkRatesData = JSON.parse(canvas.dataset.blinks);
+    const earsData = JSON.parse(canvas.dataset.ears);
+
+    const isDarkInit = document.documentElement.classList.contains('dark');
+    const gridColor = () => document.documentElement.classList.contains('dark')
+      ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+    const labelColor = () => document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b';
+
+    const chart = new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: datesData,
+        datasets: [
+          {
+            label: "Avg Blink Rate (/min)",
+            data: blinkRatesData,
+            borderColor: "#f59e0b",
+            backgroundColor: "rgba(245,158,11,0.08)",
+            tension: 0.4,
+            pointBackgroundColor: "#f59e0b",
+            pointRadius: 4,
+          },
+          {
+            label: "Avg EAR",
+            data: earsData,
+            borderColor: "#13ecda",
+            backgroundColor: "rgba(19,236,218,0.08)",
+            tension: 0.4,
+            pointBackgroundColor: "#13ecda",
+            pointRadius: 4,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: "top",
+            labels: { color: labelColor(), font: { family: 'Inter', size: 12 } }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: labelColor() },
+            grid: { color: gridColor() }
+          },
+          y: {
+            ticks: { color: labelColor() },
+            grid: { color: gridColor() }
+          }
+        }
+      }
+    });
+
+    function updateChartTheme(isDark) {
+      const c = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+      const l = isDark ? '#94a3b8' : '#64748b';
+      chart.options.plugins.legend.labels.color = l;
+      chart.options.scales.x.ticks.color = l;
+      chart.options.scales.x.grid.color = c;
+      chart.options.scales.y.ticks.color = l;
+      chart.options.scales.y.grid.color = c;
+      chart.update();
+    }
+  </script>
+
+</body>
+
+</html>

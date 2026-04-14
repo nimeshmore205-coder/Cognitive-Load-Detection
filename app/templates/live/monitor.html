@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>MindGuard AI – Live Monitor</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet" />
+  <script>
+    // Apply saved theme instantly to avoid flash
+    (function () {
+      const t = localStorage.getItem('mg-theme') || 'dark';
+      document.documentElement.classList.toggle('dark', t !== 'light');
+    })();
+  </script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#13ecda",
+            "background-dark": "#0d1f1e",
+            "card-dark": "#102220",
+            "border-dark": "#1e3432",
+          },
+          fontFamily: { display: ["Inter", "sans-serif"] },
+        },
+      },
+    };
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .chart-gradient {
+      background: linear-gradient(180deg, rgba(19, 236, 218, 0.15) 0%, rgba(19, 236, 218, 0) 100%);
+    }
+
+    .ear-bar {
+      transition: height 0.3s ease;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #0d1f1e;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #13ecda33;
+      border-radius: 9999px;
+    }
+
+    /* Spinner ring animation */
+    @keyframes spin-slow {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spin-slow {
+      animation: spin-slow 3s linear infinite;
+    }
+
+    /* Blink flash animation */
+    @keyframes blink-flash {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      30% {
+        transform: scale(1.4);
+        opacity: 0.3;
+      }
+
+      60% {
+        transform: scale(0.9);
+        opacity: 0.8;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .blink-flash {
+      animation: blink-flash 0.35s ease;
+    }
+
+    /* Pause overlay */
+    #pauseOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.60);
+      align-items: center;
+      justify-content: center;
+      border-radius: 1rem;
+      display: none;
+    }
+  </style>
+</head>
+
+<body class="bg-background-dark text-slate-100 min-h-screen">
+
+  <!-- =================== TOP NAVBAR =================== -->
+  <header class="sticky top-0 z-50 bg-card-dark/90 backdrop-blur-md border-b border-border-dark px-6 py-3">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <div class="bg-primary p-2 rounded-lg">
+          <span class="material-symbols-outlined text-background-dark leading-none"
+            style="font-size:1.25rem;">psychology</span>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight">MindGuard AI</h1>
+          <p class="text-xs text-slate-400 font-medium">Cognitive Load &amp; Stress Detection</p>
+        </div>
+      </div>
+
+      <!-- Nav links -->
+      <nav class="hidden md:flex items-center gap-8">
+        <a class="text-sm font-semibold text-primary border-b-2 border-primary pb-1" href="/live/monitor">Live
+          Monitor</a>
+        <a class="text-sm font-medium text-slate-400 hover:text-primary transition-colors" href="/user/history">Session
+          History</a>
+        <a class="text-sm font-medium text-slate-400 hover:text-primary transition-colors"
+          href="/user/stress_relief">Stress Relief</a>
+        <a class="text-sm font-medium text-slate-400 hover:text-primary transition-colors"
+          href="/user/dashboard">Dashboard</a>
+      </nav>
+
+      <!-- User Info -->
+      <div class="flex items-center gap-4">
+        <!-- Theme Toggle -->
+        <button onclick="toggleTheme()" id="themeBtn" class="p-2 rounded-full hover:bg-slate-800 transition-colors"
+          title="Toggle light/dark mode">
+          <span id="themeIcon" class="material-symbols-outlined text-slate-400"
+            style="font-size:1.25rem;">light_mode</span>
+        </button>
+        <!-- Notification Bell -->
+        <button class="p-2 rounded-full hover:bg-slate-800 transition-colors relative">
+          <span class="material-symbols-outlined text-slate-400" style="font-size:1.25rem;">notifications</span>
+          <span id="alertDot"
+            class="hidden absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-card-dark"></span>
+        </button>
+        <!-- Logout Button -->
+        <a href="/auth/logout"
+          class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-800/60 text-red-400 hover:bg-red-900/20 transition-colors text-sm font-semibold">
+          <span class="material-symbols-outlined" style="font-size:1rem;">logout</span>
+          Logout
+        </a>
+        <!-- User chip -->
+        <div class="flex items-center gap-3 border-l border-border-dark pl-4">
+          <div class="text-right hidden sm:block">
+            <p class="text-sm font-bold">{{ session.get('user_name', 'User') }}</p>
+            <p class="text-xs text-slate-400">Active Session</p>
+          </div>
+          <div class="w-10 h-10 rounded-full bg-primary/20 border-2 border-primary/40 flex items-center justify-center">
+            <span class="material-symbols-outlined text-primary" style="font-size:1.25rem;">person</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- =================== MAIN LAYOUT =================== -->
+  <main class="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- ===== LEFT ICON SIDEBAR ===== -->
+      <aside class="hidden lg:col-span-1 lg:flex flex-col items-center gap-6 py-4">
+        <a class="p-3 rounded-xl bg-primary/20 text-primary shadow-sm" href="/live/monitor" title="Live Monitoring">
+          <span class="material-symbols-outlined">videocam</span>
+        </a>
+        <a class="p-3 rounded-xl hover:bg-slate-800 text-slate-500 transition-all" href="/user/history"
+          title="Session History">
+          <span class="material-symbols-outlined">history</span>
+        </a>
+        <a class="p-3 rounded-xl hover:bg-slate-800 text-slate-500 transition-all" href="/user/stress_relief"
+          title="Stress Relief">
+          <span class="material-symbols-outlined">self_improvement</span>
+        </a>
+        <a class="p-3 rounded-xl hover:bg-slate-800 text-slate-500 transition-all" href="/user/profile" title="Profile">
+          <span class="material-symbols-outlined">person</span>
+        </a>
+        <div class="mt-auto">
+          <a href="/auth/logout"
+            class="p-3 rounded-xl hover:bg-red-900/20 text-slate-500 hover:text-red-400 transition-all flex items-center"
+            title="Logout">
+            <span class="material-symbols-outlined">logout</span>
+          </a>
+        </div>
+      </aside>
+
+      <!-- ===== MAIN MONITOR SECTION ===== -->
+      <section class="lg:col-span-8 flex flex-col gap-6">
+
+        <!-- Status Banner -->
+        <div id="statusBanner"
+          class="bg-emerald-900/20 border border-emerald-800 rounded-xl p-4 flex items-center justify-between transition-all duration-500">
+          <div class="flex items-center gap-3">
+            <div class="flex h-3 w-3 relative">
+              <span
+                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </div>
+            <p class="font-semibold text-emerald-400">Status: <span id="statusLabel"
+                class="uppercase tracking-wide">Initializing…</span></p>
+          </div>
+          <p id="statusSub" class="text-sm text-emerald-400/70 hidden sm:block">Optical tracking is starting up.</p>
+        </div>
+
+        <!-- Video Feed Card -->
+        <div class="relative bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border-2 border-border-dark"
+          style="aspect-ratio:16/9;">
+
+          <!-- Hidden canvas for frame upload -->
+          <canvas id="captureCanvas" style="display:none;"></canvas>
+
+          <!-- Placeholder -->
+          <div id="cameraPlaceholder"
+            class="absolute inset-0 flex flex-col items-center justify-center gap-4 text-slate-500">
+            <span class="material-symbols-outlined" style="font-size:3rem; opacity:0.4;">videocam_off</span>
+            <p class="text-sm font-medium opacity-60">Camera not started yet</p>
+            <div class="spin-slow opacity-40">
+              <span class="material-symbols-outlined" style="font-size:1.5rem;">refresh</span>
+            </div>
+          </div>
+
+          <!-- Live webcam video -->
+          <video id="userVideo" autoplay playsinline muted class="w-full h-full object-cover"
+            style="display:none; background:#000;"></video>
+
+          <!-- Facial/AR overlay lines -->
+          <div class="absolute inset-0 pointer-events-none">
+            <div
+              class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-64 border border-primary/30 rounded-[40%]">
+              <div class="absolute w-full left-0" style="top:33%; height:1px; background:rgba(19,236,218,0.15);"></div>
+              <div class="absolute w-full left-0" style="top:66%; height:1px; background:rgba(19,236,218,0.15);"></div>
+            </div>
+          </div>
+
+          <!-- Pause Overlay -->
+          <div id="pauseOverlay">
+            <div class="text-white text-center px-6">
+              <span class="material-symbols-outlined" style="font-size:3rem; color:#13ecda;">pause_circle</span>
+              <h3 class="text-xl font-bold mt-2">Session Paused</h3>
+              <p class="text-sm text-slate-300 mt-1" id="pauseCountdown"></p>
+              <!-- Break Reminder (shown during pause) -->
+              <div id="breakReminder"
+                class="hidden mt-4 bg-primary/10 border border-primary/30 rounded-xl px-4 py-3 text-sm">
+                <p class="font-bold text-primary flex items-center justify-center gap-1">
+                  <span class="material-symbols-outlined" style="font-size:1rem;">visibility</span>
+                  Eye Exercise Break!
+                </p>
+                <p class="text-slate-300 mt-1">Look at something <b>20 feet away</b> for <b>20 seconds</b>.</p>
+                <p class="text-xs text-slate-400 mt-1" id="breakTimer">Relax your eyes… 20s</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- LIVE Badge -->
+          <div
+            class="absolute top-4 right-4 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono text-white">
+            <span id="liveBadge">INITIALIZING</span>
+          </div>
+
+          <!-- Progress overlay (top-left) -->
+          <div id="progressBadge"
+            class="hidden absolute top-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono text-primary">
+            <span id="progressText"></span>
+          </div>
+
+          <!-- Bottom controls -->
+          <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4">
+            <button id="stopBtn" onclick="stopMonitoring()"
+              class="bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-full font-bold flex items-center gap-2 shadow-lg transition-transform active:scale-95">
+              <span class="material-symbols-outlined" style="font-size:1rem;">stop</span>
+              Stop Monitoring
+            </button>
+            <a href="/user/stress_relief"
+              class="bg-white/10 backdrop-blur-md hover:bg-white/20 text-white p-2.5 rounded-full transition-colors"
+              title="Stress Relief">
+              <span class="material-symbols-outlined">spa</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- EAR Live Chart Card -->
+        <div class="bg-card-dark border border-border-dark rounded-2xl p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-bold text-slate-200">Eye Aspect Ratio (EAR)</h3>
+              <p class="text-xs text-slate-500">Live responsiveness tracking</p>
+            </div>
+            <div class="text-right">
+              <span id="earDisplay" class="text-2xl font-bold text-primary">—</span>
+              <span class="text-xs text-slate-400 ml-1">avg</span>
+            </div>
+          </div>
+          <!-- Bar chart area -->
+          <div id="earBars" class="h-24 w-full flex items-end gap-1 overflow-hidden chart-gradient rounded-lg px-2">
+            <!-- JS-generated bars will go here -->
+          </div>
+          <!-- Trend text -->
+          <div id="trendBox"
+            class="mt-3 rounded-lg px-4 py-2 text-center text-sm font-semibold bg-slate-800 text-slate-300">
+            <span id="trendText">Initializing analysis…</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ===== RIGHT SIDEBAR ===== -->
+      <aside class="lg:col-span-3 flex flex-col gap-6">
+
+        <!-- Fatigue Score Card -->
+        <div class="bg-card-dark border border-border-dark rounded-2xl p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <span class="material-symbols-outlined text-amber-400 bg-amber-900/20 p-2 rounded-lg">bedtime</span>
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Fatigue Score</span>
+          </div>
+          <div class="flex flex-col items-center justify-center py-2">
+            <div class="relative w-32 h-32 flex items-center justify-center">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 128 128">
+                <circle class="text-slate-800" cx="64" cy="64" fill="transparent" r="56" stroke="currentColor"
+                  stroke-width="10" />
+                <circle id="fatigueRing" class="text-primary" cx="64" cy="64" fill="transparent" r="56"
+                  stroke="currentColor" stroke-width="10" stroke-dasharray="351.86" stroke-dashoffset="351.86"
+                  style="transition: stroke-dashoffset 1s ease, stroke 0.5s ease;" />
+              </svg>
+              <div class="absolute flex flex-col items-center">
+                <span id="fatigueScore" class="text-3xl font-black">—</span>
+                <span id="fatigueLabel" class="text-[10px] uppercase font-bold text-slate-400">Waiting</span>
+              </div>
+            </div>
+          </div>
+          <p id="fatigueDesc" class="text-center text-sm text-slate-500 mt-2">Waiting for sensor data…</p>
+        </div>
+
+        <!-- Blink Monitor Card -->
+        <div class="bg-card-dark border border-border-dark rounded-2xl p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <span id="blinkEyeIcon"
+              class="material-symbols-outlined text-blue-400 bg-blue-900/20 p-2 rounded-lg">visibility</span>
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Blink Monitor</span>
+          </div>
+          <!-- Hero: actual blink count in last 10 seconds -->
+          <div class="flex items-baseline gap-2">
+            <span id="blink10sDisplay" class="text-4xl font-black">—</span>
+            <span class="text-slate-400 font-medium text-sm">blinks<span class="text-xs">/10s</span></span>
+          </div>
+          <!-- Sub-text: extrapolated blinks/min -->
+          <p id="blinkRateSubtext" class="text-xs text-slate-500 mt-1">— blinks/min</p>
+          <div class="mt-4 bg-slate-800 rounded-full h-1.5 w-full overflow-hidden">
+            <div id="blinkBar" class="bg-blue-500 h-full rounded-full transition-all duration-700" style="width:0%">
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-3 flex items-center gap-1">
+            <span class="material-symbols-outlined text-primary" style="font-size:0.875rem;">info</span>
+            Normal: 2–4 blinks per 10 seconds
+          </p>
+        </div>
+
+        <!-- Alert Level Card -->
+        <div class="bg-card-dark border border-border-dark rounded-2xl p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <span class="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg">monitor_heart</span>
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Alert Level</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span id="alertDotSidebar" class="w-3 h-3 rounded-full bg-slate-600 flex-shrink-0"></span>
+            <span id="alertLevelDisplay" class="text-xl font-black text-slate-300">Unknown</span>
+          </div>
+          <p id="alertDesc" class="text-sm text-slate-500 mt-3">Waiting for analysis data…</p>
+        </div>
+
+
+
+        <!-- Quick Relief -->
+        <div class="bg-primary/5 border border-primary/20 rounded-2xl p-6 shadow-sm">
+          <h3 class="font-bold text-slate-200 mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">spa</span>
+            Quick Relief
+          </h3>
+          <div class="space-y-3">
+            <a href="/user/stress_relief"
+              class="w-full flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all group">
+              <span class="text-sm font-semibold">4-7-8 Breathing</span>
+              <span
+                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">chevron_right</span>
+            </a>
+            <a href="/user/stress_relief"
+              class="w-full flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all group">
+              <span class="text-sm font-semibold">Eye Strain Relief</span>
+              <span
+                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">chevron_right</span>
+            </a>
+            <a href="/user/history"
+              class="w-full flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all group">
+              <span class="text-sm font-semibold">View Shift Report</span>
+              <span
+                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">bar_chart</span>
+            </a>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+  </main>
+
+  <!-- Floating Stop Button (Mobile) -->
+  <div class="fixed bottom-8 right-8 z-40 md:hidden">
+    <button onclick="stopMonitoring()"
+      class="w-14 h-14 bg-red-500 text-white rounded-full shadow-2xl flex items-center justify-center">
+      <span class="material-symbols-outlined">stop</span>
+    </button>
+  </div>
+
+  <!-- Download Report Button (hidden until session completes) -->
+  <div class="text-center mt-4 mb-8">
+    <button id="downloadBtn"
+      class="hidden bg-primary text-background-dark font-bold px-8 py-3 rounded-full shadow-lg hover:opacity-90 transition"
+      onclick="window.open('/live/shift_report/pdf')">
+      📄 Download Shift Report (PDF)
+    </button>
+  </div>
+
+
+  <!-- =================== SCRIPTS =================== -->
+  <script>
+    /* =========================================================
+       REFERENCES
+    ========================================================= */
+    const userVideo = document.getElementById("userVideo");
+    const captureCanvas = document.getElementById("captureCanvas");
+    const pauseOverlay = document.getElementById("pauseOverlay");
+    const pauseCountdown = document.getElementById("pauseCountdown");
+    const cameraPlaceholder = document.getElementById("cameraPlaceholder");
+    const earDisplay = document.getElementById("earDisplay");
+    const blink10sDisplay = document.getElementById("blink10sDisplay");
+    const blinkRateSubtext = document.getElementById("blinkRateSubtext");
+    const blinkEyeIcon = document.getElementById("blinkEyeIcon");
+    const blinkBar = document.getElementById("blinkBar");
+    const fatigueScore = document.getElementById("fatigueScore");
+    const fatigueLabel = document.getElementById("fatigueLabel");
+    const fatigueDesc = document.getElementById("fatigueDesc");
+    const fatigueRing = document.getElementById("fatigueRing");
+    const alertLevelDisplay = document.getElementById("alertLevelDisplay");
+    const alertDotSidebar = document.getElementById("alertDotSidebar");
+    const alertDesc = document.getElementById("alertDesc");
+    const alertDotNav = document.getElementById("alertDot");
+    const statusBanner = document.getElementById("statusBanner");
+    const statusLabel = document.getElementById("statusLabel");
+    const statusSub = document.getElementById("statusSub");
+    const liveBadge = document.getElementById("liveBadge");
+    const progressBadge = document.getElementById("progressBadge");
+    const progressText = document.getElementById("progressText");
+    const earBarsContainer = document.getElementById("earBars");
+    const trendBox = document.getElementById("trendBox");
+    const trendText = document.getElementById("trendText");
+
+    let localStream = null;
+    let uploadIntervalId = null;
+    let webcamStarted = false;
+    let sessionCompleted = false;
+
+    // EAR bar history (keep last 24 values)
+    const earHistory = Array(24).fill(0.5);
+
+    /* =========================================================
+       WEBCAM
+    ========================================================= */
+    async function startWebcam() {
+      if (webcamStarted) return;
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        userVideo.srcObject = localStream;
+        userVideo.style.display = "block";
+        cameraPlaceholder.style.display = "none";
+        webcamStarted = true;
+        uploadIntervalId = setInterval(uploadFrame, 100); // ~10 fps
+        console.log("📷 User webcam started");
+      } catch (err) {
+        console.error("Webcam error:", err);
+        cameraPlaceholder.innerHTML = `<span class="material-symbols-outlined" style="font-size:2.5rem;color:#ef4444;">videocam_off</span><p class="text-sm text-red-400 mt-2">Camera access denied. Please allow camera.</p>`;
+        cameraPlaceholder.style.display = "flex";
+      }
+    }
+
+    function stopWebcam() {
+      if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+      }
+      if (uploadIntervalId) {
+        clearInterval(uploadIntervalId);
+        uploadIntervalId = null;
+      }
+      userVideo.style.display = "none";
+      webcamStarted = false;
+    }
+
+    let isUploading = false;
+
+    async function uploadFrame() {
+      if (!localStream || !webcamStarted || isUploading) return;
+      isUploading = true;
+      try {
+        const ctx = captureCanvas.getContext("2d");
+        captureCanvas.width = userVideo.videoWidth || 640;
+        captureCanvas.height = userVideo.videoHeight || 480;
+        ctx.drawImage(userVideo, 0, 0);
+        const blob = await new Promise(r => captureCanvas.toBlob(r, "image/jpeg", 0.7));
+        if (!blob) { isUploading = false; return; }
+        const fd = new FormData();
+        fd.append("frame", blob, "frame.jpg");
+        await fetch("/live/upload_frame", { method: "POST", body: fd });
+      } catch (e) {
+        // silent
+      } finally {
+        isUploading = false;
+      }
+    }
+
+    /* =========================================================
+       CAMERA STATE POLLING (capture / pause / completed)
+       Server poll every 1s sets the source-of-truth seconds.
+       Client-side ticker updates display every 250ms so the
+       countdown never "jumps" or lags visually.
+    ========================================================= */
+    let clientRemaining = 0;   // client-side countdown (ms)
+    let lastPhase = null;
+    let lastServerSecs = 0;
+    let lastServerTime = 0;    // performance.now() at last server response
+
+    // Client ticker — runs every 250ms for smooth countdown display
+    setInterval(() => {
+      if (sessionCompleted) return;
+      if (!lastPhase || lastPhase === "idle" || lastPhase === "completing") return;
+
+      // Interpolate: estimate how many seconds have elapsed since last server update
+      const elapsed = (performance.now() - lastServerTime) / 1000;
+      const smoothSecs = Math.max(0, Math.round(lastServerSecs - elapsed));
+
+      if (lastPhase === "capture") {
+        setStatusBanner("capture", `Capturing… ends in ${smoothSecs}s`);
+        liveBadge.innerText = `LIVE | ${smoothSecs}s`;
+      } else if (lastPhase === "pause") {
+        pauseCountdown.innerText = `Next capture in ${smoothSecs}s`;
+        setStatusBanner("pause", `Next capture in ${smoothSecs}s`);
+        liveBadge.innerText = `PAUSED | ${smoothSecs}s`;
+      }
+    }, 250);
+
+    // Server poll — syncs source-of-truth every 1s
+    setInterval(async () => {
+      if (sessionCompleted) return;
+
+      const state = await fetch("/live/camera_state").then(r => r.json()).catch(() => null);
+      if (!state) return;
+
+      // Track phase for client ticker
+      lastPhase = state.phase;
+
+      // Auto-start webcam ONLY during capture/completing phase; stop it during pause
+      if (state.phase === "capture" || state.phase === "completing") {
+        if (!webcamStarted) startWebcam();
+        pauseOverlay.style.display = "none";
+        if (state.phase === "completing") {
+          liveBadge.innerText = "FINISHING…";
+          setStatusBanner("capture", "Finalising capture 8 / 8…");
+        }
+      } else if (state.phase === "pause") {
+        // Camera not needed during pause – release it so no hardware conflict
+        if (webcamStarted) stopWebcam();
+        pauseOverlay.style.display = "flex";
+      } else {
+        pauseOverlay.style.display = "none";
+      }
+
+      // Reset interpolation counters on every server tick so countdown is accurate
+      lastServerSecs = state.remaining_seconds || 0;
+      lastServerTime = performance.now();
+
+      // Session completed
+      if (state.completed || state.phase === "completed") {
+        sessionCompleted = true;
+        lastPhase = "completed";
+        stopWebcam();
+        setStatusBanner("completed", `Shift Complete – All ${state.total || 8} captures finished`);
+        liveBadge.innerText = "COMPLETED";
+        progressText.innerText = `Done – ${state.total || 8} / ${state.total || 8}`;
+        progressBadge.classList.remove("hidden");
+        document.getElementById("downloadBtn").classList.remove("hidden");
+        return;
+      }
+
+      // Update progress badge
+      progressText.innerText = `Capture ${state.current} / ${state.total}`;
+      progressBadge.classList.remove("hidden");
+
+      if (state.phase === "idle") {
+        setStatusBanner("idle", "Optical tracking is active and optimal.");
+        liveBadge.innerText = "ACTIVE";
+      }
+    }, 1000);
+
+    function setStatusBanner(state, subText) {
+      const configs = {
+        capture: { bg: "bg-emerald-900/20", border: "border-emerald-800", dot: "bg-emerald-500", ping: "bg-emerald-400", text: "text-emerald-400", label: "Focused – Capturing" },
+        pause: { bg: "bg-amber-900/20", border: "border-amber-800", dot: "bg-amber-500", ping: "bg-amber-400", text: "text-amber-400", label: "Paused" },
+        completed: { bg: "bg-primary/10", border: "border-primary/30", dot: "bg-primary", ping: "bg-primary", text: "text-primary", label: "Session Complete" },
+        idle: { bg: "bg-emerald-900/20", border: "border-emerald-800", dot: "bg-emerald-500", ping: "bg-emerald-400", text: "text-emerald-400", label: "Focused" },
+      };
+      const c = configs[state] || configs.idle;
+      statusBanner.className = `${c.bg} border ${c.border} rounded-xl p-4 flex items-center justify-between transition-all duration-500`;
+      statusLabel.className = `uppercase tracking-wide ${c.text}`;
+      statusLabel.innerText = c.label;
+      statusSub.className = `text-sm ${c.text} opacity-70 hidden sm:block`;
+      statusSub.innerText = subText || "";
+    }
+
+    /* =========================================================
+       EAR BAR CHART
+    ========================================================= */
+    function renderEarBars() {
+      earBarsContainer.innerHTML = "";
+      const max = Math.max(...earHistory, 0.01);
+      earHistory.forEach(val => {
+        const pct = Math.round((val / max) * 100);
+        const div = document.createElement("div");
+        div.className = "ear-bar rounded-t-sm flex-1";
+        div.style.height = `${pct}%`;
+        div.style.background = val > 0.28
+          ? "rgba(19,236,218,0.8)"
+          : val > 0.22
+            ? "rgba(251,191,36,0.8)"
+            : "rgba(239,68,68,0.8)";
+        earBarsContainer.appendChild(div);
+      });
+    }
+
+    // Initial render with placeholder bars
+    renderEarBars();
+
+    /* =========================================================
+       FATIGUE RING GAUGE
+    ========================================================= */
+    const RING_CIRCUMFERENCE = 351.86; // 2π×56
+
+    function updateFatigueRing(score, alertLevel) {
+      // score 0–100, fill ring proportionally
+      const offset = RING_CIRCUMFERENCE - (score / 100) * RING_CIRCUMFERENCE;
+      fatigueRing.style.strokeDashoffset = offset;
+      fatigueScore.innerText = score;
+
+      let color = "#13ecda", label = "Low Risk", desc = "Score is within normal range.";
+      if (alertLevel === "Critical" || score > 70) {
+        color = "#ef4444"; label = "Critical"; desc = "High fatigue detected! Please take a break.";
+      } else if (alertLevel === "High" || score > 50) {
+        color = "#f59e0b"; label = "Elevated"; desc = "Fatigue is rising. Consider a short break soon.";
+      } else if (alertLevel === "Moderate" || score > 30) {
+        color = "#eab308"; label = "Moderate"; desc = "Mild fatigue detected. Stay hydrated.";
+      }
+
+      fatigueRing.style.stroke = color;
+      fatigueLabel.innerText = label;
+      fatigueDesc.innerText = desc;
+
+      // Show alert dot in nav
+      if (score > 50) {
+        alertDotNav.classList.remove("hidden");
+      } else {
+        alertDotNav.classList.add("hidden");
+      }
+    }
+
+    /* =========================================================
+       METRICS POLLING (/live/metrics)
+    ========================================================= */
+    let prevBlinkRate = null;
+    let prevEar = null;
+    let prevBlink10s = null;  // Track previous blink_10s to detect new blinks
+
+    // Sliding window for EAR smoothing (last 5 readings)
+    const earWindow = [];
+    const MAX_WINDOW = 5;
+
+    setInterval(async () => {
+      const d = await fetch("/live/metrics").then(r => r.json()).catch(() => null);
+      if (!d || !d.ready) return;
+
+      // EAR — smooth with sliding window to reduce jitter
+      const rawEar = parseFloat(d.ear);
+      earWindow.push(rawEar);
+      if (earWindow.length > MAX_WINDOW) earWindow.shift();
+      const ear = parseFloat((earWindow.reduce((a, v) => a + v, 0) / earWindow.length).toFixed(3));
+      earDisplay.innerText = ear.toFixed(3);  // always show 3 decimal places
+      earHistory.push(ear);
+      earHistory.shift();
+      renderEarBars();
+
+      // Blink Monitor — show actual blink count in last 10s as hero value
+      const blink10s = d.blink_10s || 0;
+      const br = parseFloat(d.blink_rate) || 0;
+
+      blink10sDisplay.innerText = blink10s;
+      blinkRateSubtext.innerText = `≈ ${Math.round(br)} blinks/min`;
+
+      // Flash the eye icon when a new blink is detected
+      if (prevBlink10s !== null && blink10s > prevBlink10s) {
+        blinkEyeIcon.classList.remove("blink-flash");
+        // Force reflow to re-trigger the animation
+        void blinkEyeIcon.offsetWidth;
+        blinkEyeIcon.classList.add("blink-flash");
+        blinkEyeIcon.addEventListener("animationend", () => {
+          blinkEyeIcon.classList.remove("blink-flash");
+        }, { once: true });
+      }
+      prevBlink10s = blink10s;
+
+      // Progress bar: scale 0–8 blinks/10s (normal 2–4)
+      const barPct = Math.min(Math.round((blink10s / 8) * 100), 100);
+      blinkBar.style.width = `${barPct}%`;
+      blinkBar.style.background = blink10s > 6 ? "#f59e0b" : blink10s < 2 ? "#ef4444" : "#3b82f6";
+
+      // Alert Level
+      const al = d.alert || "Normal";
+      alertLevelDisplay.innerText = al;
+      const alColors = { Normal: "#10b981", Low: "#10b981", Moderate: "#eab308", High: "#f59e0b", Critical: "#ef4444" };
+      const alDescs = {
+        Normal: "All metrics within healthy ranges.",
+        Low: "Slight deviation, monitor closely.",
+        Moderate: "Elevated fatigue indicators. Consider a break.",
+        High: "High fatigue. A short break is recommended.",
+        Critical: "Critical fatigue level! Stop and rest immediately.",
+      };
+      alertDotSidebar.style.background = alColors[al] || "#6b7280";
+      alertDesc.innerText = alDescs[al] || "Monitoring…";
+
+      // Fatigue Score — uses smoothed EAR + alert weight
+      // Normal EAR range: 0.25–0.40. Below 0.20 = very drowsy.
+      const earFatigue = Math.max(0, Math.min(50, Math.round((0.35 - ear) / 0.35 * 50)));
+      const alertWeights = { Normal: 0, Low: 8, Moderate: 20, High: 35, Critical: 50 };
+      const alertFatigue = alertWeights[al] ?? 0;
+      const score = Math.min(100, earFatigue + alertFatigue);
+      updateFatigueRing(score, al);
+
+      // Trend analysis
+      if (prevBlinkRate !== null && prevEar !== null) {
+        let msg = "✅ Stable State", bgClass = "bg-slate-800 text-slate-300";
+        if (br > prevBlinkRate + 2) { msg = "⚠️ Blink rate increasing (stress rising)"; bgClass = "bg-amber-900/30 text-amber-300"; }
+        else if (ear < prevEar - 0.015 && ear < 0.25) { msg = "📉 EAR dropping (possible drowsiness)"; bgClass = "bg-red-900/30 text-red-300"; }
+        else if (al === "High" || al === "Critical") { msg = "🚨 Critical fatigue detected!"; bgClass = "bg-red-900/40 text-red-300 font-bold"; }
+        trendText.innerText = msg;
+        trendBox.className = `mt-3 rounded-lg px-4 py-2 text-center text-sm font-semibold ${bgClass}`;
+      }
+
+      prevBlinkRate = br;
+      prevEar = ear;
+    }, 1000);
+
+    /* =========================================================
+       STOP MONITORING
+    ========================================================= */
+    async function stopMonitoring() {
+      if (!confirm("Stop monitoring? This will end your current session.")) return;
+      sessionCompleted = true; // Stop polling immediately to prevent webcam restart
+      const btn = document.getElementById("stopBtn");
+      btn.disabled = true;
+      btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:1rem;">hourglass_empty</span> Stopping…`;
+      stopWebcam();
+      // Visual feedback that session is ending
+      cameraPlaceholder.innerHTML = `<div class="spin-slow opacity-40"><span class="material-symbols-outlined" style="font-size:3rem;">refresh</span></div><p class="text-sm font-medium opacity-60 mt-2">Ending session...</p>`;
+      cameraPlaceholder.style.display = "flex";
+      try {
+        await fetch("/live/stop_capture", { method: "POST" });
+        window.location.href = "/user/dashboard";
+      } catch (e) {
+        alert("Error: " + e);
+        sessionCompleted = false;
+        btn.disabled = false;
+        btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:1rem;">stop</span> Stop Monitoring`;
+      }
+    }
+
+    // ── Theme Toggle ──
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('mg-theme', isDark ? 'dark' : 'light');
+      document.getElementById('themeIcon').innerText = isDark ? 'light_mode' : 'dark_mode';
+    }
+    document.getElementById('themeIcon').innerText =
+      document.documentElement.classList.contains('dark') ? 'light_mode' : 'dark_mode';
+
+    // ── 20-20-20 Eye Exercise Toast ──
+    // Every 20 minutes, show a dismissible toast for 20 seconds
+    const EYE_INTERVAL_MS = 20 * 60 * 1000; // 20 minutes
+    let eyeToastTimer = null;
+
+    function showEyeToast() {
+      // Only show during active session
+      const existing = document.getElementById('eyeToast');
+      if (existing) existing.remove();
+
+      const toast = document.createElement('div');
+      toast.id = 'eyeToast';
+      toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;min-width:320px;max-width:90vw;';
+      toast.innerHTML = `
+        <div style="background:#102220;border:1px solid #13ecda40;border-radius:16px;padding:16px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.4);display:flex;align-items:flex-start;gap:12px;">
+          <span class="material-symbols-outlined" style="color:#13ecda;font-size:2rem;flex-shrink:0;">visibility</span>
+          <div style="flex:1;">
+            <p style="font-weight:700;color:#e2e8f0;font-size:0.95rem;">👁 20-20-20 Eye Exercise</p>
+            <p style="color:#94a3b8;font-size:0.82rem;margin-top:4px;">Look at something <b style="color:#e2e8f0;">20 feet away</b> for <b style="color:#e2e8f0;">20 seconds</b> to reduce eye strain.</p>
+            <p id="eyeToastCountdown" style="color:#13ecda;font-size:0.78rem;margin-top:6px;font-weight:600;">Dismiss in 20s</p>
+          </div>
+          <button onclick="dismissEyeToast()" style="color:#64748b;font-size:1.2rem;line-height:1;background:none;border:none;cursor:pointer;">✕</button>
+        </div>`;
+      document.body.appendChild(toast);
+
+      let sec = 20;
+      const countEl = document.getElementById('eyeToastCountdown');
+      const interval = setInterval(() => {
+        sec--;
+        if (countEl) countEl.innerText = `Dismiss in ${sec}s`;
+        if (sec <= 0) { clearInterval(interval); dismissEyeToast(); }
+      }, 1000);
+      toast._interval = interval;
+    }
+
+    function dismissEyeToast() {
+      const t = document.getElementById('eyeToast');
+      if (t) { clearInterval(t._interval); t.remove(); }
+    }
+
+    // Start 20-20-20 timer once page loads
+    setTimeout(() => {
+      showEyeToast();
+      eyeToastTimer = setInterval(showEyeToast, EYE_INTERVAL_MS);
+    }, EYE_INTERVAL_MS);
+
+    // ── Pause-phase Break Reminder ──
+    // When pause phase begins, show eye exercise card inside the pause overlay
+    // Also start a 20-second countdown in the break reminder
+    let breakReminderInterval = null;
+
+    function showBreakReminder() {
+      const el = document.getElementById('breakReminder');
+      if (!el || !el.classList.contains('hidden')) return;
+      el.classList.remove('hidden');
+      let sec = 20;
+      const timerEl = document.getElementById('breakTimer');
+      clearInterval(breakReminderInterval);
+      breakReminderInterval = setInterval(() => {
+        sec--;
+        if (timerEl) timerEl.innerText = `Relax your eyes… ${Math.max(0, sec)}s`;
+        if (sec <= 0) clearInterval(breakReminderInterval);
+      }, 1000);
+    }
+
+    function hideBreakReminder() {
+      const el = document.getElementById('breakReminder');
+      if (el) el.classList.add('hidden');
+      clearInterval(breakReminderInterval);
+    }
+
+    // Hook into the pause overlay visibility changes
+    const pauseOverlayEl = document.getElementById('pauseOverlay');
+    if (pauseOverlayEl) {
+      const observer = new MutationObserver(() => {
+        const isVisible = pauseOverlayEl.style.display !== 'none';
+        if (isVisible) showBreakReminder();
+        else hideBreakReminder();
+      });
+      observer.observe(pauseOverlayEl, { attributes: true, attributeFilter: ['style'] });
+    }
+  </script>
+
+</body>
+
+</html>
